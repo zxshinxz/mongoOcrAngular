@@ -1,0 +1,46 @@
+* {
+
+}
+
+html, body {
+	height: 100%;
+}
+
+.heading {
+	text-align: center;
+}
+
+.my-drop-zone {
+	border: dotted 3px lightgray;
+}
+.ng-file-over {
+	border: dotted 3px red;
+}/* Default class applied to drop zones on over */
+.another-file-over-class {
+	border: dotted 3px green;
+}
+
+/*article {
+ text-align: center
+ }
+
+ #dnd-filesHolder {
+ border: 10px dashed #ccc;
+ width: 300px;
+ min-height: 300px;
+ margin: auto;
+ }
+
+ #dnd-filesHolder.hover {
+ border: 10px dashed #0c0;
+ }
+
+ #dnd-filesHolder img {
+ display: block;
+ margin: 10px auto;
+ }
+
+ #dnd-fileHolder p {
+ margin: 10px;
+ font-size: 14px;
+ }*/
