@@ -97,69 +97,53 @@ module.exports = {
 		 	var identity = File.adapterDictionary.registerConnection;
 		 	var config = File.connections[identity].config;
 		 	var cstring  = getConnectionString(config);
+		 	
 		 	var file = req.files.userPhoto;
 		 	var id = sid.generate();
 		    var fileName = id + "." + fileExtension(safeFilename(file.name));
-		    
 		 	
 		 	Db.connect(cstring, function(err, db) {
 	 		  if(err) return console.dir(err);
-			    fs.readFile(file.path, function (err, data) {
-			      if (err) {
-			        res.json({'error': 'could not read file'});
-			      } else {
-			    	  
-			    	  
-			 		  var grid = new Grid(db);    
-			 		  var buffer = new Buffer("from beginning Hello world this is takapuna reporting");
-			 		  grid.put(buffer, {metadata:{category:'text'}, content_type: 'text'}, function(err, fileInfo) {
-			 		    if(!err) {
-			 		      console.log("Finished writing file to Mongo:  "  +fileInfo._id.toString());
-			 		    	
-			 		    }else{
-			 		    	console.log(err);
-			 		    }
-			 		  });
-			 		  
-			 		  
-			      }
-			    });
-			 	 
+	 		  
+	 		  var gfs = Grid(db, mongo);
+		 		var writestream = gfs.createWriteStream({
+					filename : file.name,
+					mode : 'w',
+					content_type: file.mimetype,
+					chunkSize : 1024,
+					root : 'my_collection',
+					metadata : {
+						groupId: 101
+					}
+				});
+		 		
+		 		fs.createReadStream(file.path).pipe(writestream);
+		 		
+		 		writestream.on('close', function (file) {
+		 			  // do something with `file`
+		 			  console.log("file writing done: " + file.filename);
+		 			 res.send(); // 204
+		 		});
 			 });
 		  },
+		  
 		  
 //		  find all files
 		  findAll: function(req, res){
 			  
 		  },
 		  
-		  find: function(req, res){
-			  
-	 		  // getting file
-//	 		  	grid.get('5381b9695ad1b1c02dc7f0d7', function(err, data) {
-//	 		      console.log("Retrieved data: " + data.toString());
-//	 		    });
-			  
-			// This line opens the file as a readable stream
-        	  var readStream = fs.createReadStream("public/images/ZQceeRnT9/ZQceeRnT9.jpg");
-
-        	  // This will wait until we know the readable stream is actually valid before piping
-        	  readStream.on('open', function () {
-        	    // This just pipes the read stream to the response object (which goes to the client)
-        	    readStream.pipe(res);
-        	  });
-
-        	  // This catches any errors that happen while creating the readable stream (usually invalid names)
-        	  readStream.on('error', function(err) {
-        	    res.end(err);
-        	  });
+		  
+// 			find specific files
+		  find : function(req, res) {
+	
 		  },
 			  
 		/**
 		 * Overrides for the settings in `config/controllers.js`
 		 * (specific to GifController)
 		 */
-		_config: {}
+		  _config: {}
 		
 		
 };
