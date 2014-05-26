@@ -79,10 +79,14 @@ function processImage(id, name, path, cb) {
 }
 
 
-var mongo = require('mongodb'),
-Db = mongo.Db,
-Grid = mongo.Grid,
-ObjectID = require('mongodb').ObjectID;
+//var mongo = require('mongodb'),
+//Db = mongo.Db,
+//Grid = mongo.Grid,
+//ObjectID = require('mongodb').ObjectID;
+
+var mongo = require('mongodb');
+var Db = mongo.Db;
+var Grid = require('gridfs-stream');
 
 module.exports = {
 		
@@ -90,84 +94,66 @@ module.exports = {
 		
 		 upload: function (req, res) {
 		 
-//		 	var identity = File.adapterDictionary.registerConnection;
-//		 	var config = File.connections[identity].config;
-//		 	var cstring  = getConnectionString(config);
-//		 	
-//		 	Db.connect(cstring, function(err, db) {
-//	 		  if(err) return console.dir(err);
-//
-//	 		  var grid = new Grid(db);    
-//	 		  var buffer = new Buffer("from beginning Hello world this is takapuna reporting");
-//	 		  grid.put(buffer, {metadata:{category:'text'}, content_type: 'text'}, function(err, fileInfo) {
-//	 		    if(!err) {
-//	 		      console.log("Finished writing file to Mongo:  "  +fileInfo._id.toString());
-//	 		    	
-//	 		    }else{
-//	 		    	console.log(err);
-//	 		    }
-//	 		    
-//	 		  });
-	 		  
-	 		  
+		 	var identity = File.adapterDictionary.registerConnection;
+		 	var config = File.connections[identity].config;
+		 	var cstring  = getConnectionString(config);
+		 	var file = req.files.userPhoto;
+		 	var id = sid.generate();
+		    var fileName = id + "." + fileExtension(safeFilename(file.name));
+		    
+		 	
+		 	Db.connect(cstring, function(err, db) {
+	 		  if(err) return console.dir(err);
+			    fs.readFile(file.path, function (err, data) {
+			      if (err) {
+			        res.json({'error': 'could not read file'});
+			      } else {
+			    	  
+			    	  
+			 		  var grid = new Grid(db);    
+			 		  var buffer = new Buffer("from beginning Hello world this is takapuna reporting");
+			 		  grid.put(buffer, {metadata:{category:'text'}, content_type: 'text'}, function(err, fileInfo) {
+			 		    if(!err) {
+			 		      console.log("Finished writing file to Mongo:  "  +fileInfo._id.toString());
+			 		    	
+			 		    }else{
+			 		    	console.log(err);
+			 		    }
+			 		  });
+			 		  
+			 		  
+			      }
+			    });
+			 	 
+			 });
+		  },
+		  
+//		  find all files
+		  findAll: function(req, res){
+			  
+		  },
+		  
+		  find: function(req, res){
+			  
 	 		  // getting file
 //	 		  	grid.get('5381b9695ad1b1c02dc7f0d7', function(err, data) {
 //	 		      console.log("Retrieved data: " + data.toString());
 //	 		    });
-//	 		});
-		 	
-		 	
-		 	var file = req.files.userPhoto;
-		 
-		    var id = sid.generate();
-		    var fileName = id + "." + fileExtension(safeFilename(file.name));
-		    var dirPath = UPLOAD_PATH + '/' + id;
-		    var filePath = dirPath + '/' + fileName;
-		 
-		    try {
-		      mkdirp.sync(dirPath, 0755);
-		    } catch (e) {
-		      console.log(e);
-		    }
-		 
-		    fs.readFile(file.path, function (err, data) {
-		      if (err) {
-		        res.json({'error': 'could not read file'});
-		      } else {
-		    	  
-//		    	var buffer = new Buffer(data);
-//		    	grid.put(buffer, {metadata:{category:'text'}, content_type: 'text'}, function(err, fileInfo) {
-//		 		    if(!err) {
-//		 		      console.log("Finished writing file to Mongo:  "  +fileInfo._id.toString());
-//		 		    }else{
-//		 		    	console.log(err);
-//		 		    }
-//		 		    
-//		 		});
-		    	  
-		    	
-// 				writing file
-//		    	
-		        fs.writeFile(filePath, data, function (err) {
-		          if (err) {
-		            res.json({'error': 'could not write file to storage'});
-		          } else {
-		            processImage(id, fileName, filePath, function (err, data) {
-		              if (err) {
-		                res.json(err);
-		              } else {
-		                res.sendfile(file);
-		              }
-		            });
-		          }
-		        });
-		        
-		        
-		        
-		      }
-		    });
-		  },
 			  
+			// This line opens the file as a readable stream
+        	  var readStream = fs.createReadStream("public/images/ZQceeRnT9/ZQceeRnT9.jpg");
+
+        	  // This will wait until we know the readable stream is actually valid before piping
+        	  readStream.on('open', function () {
+        	    // This just pipes the read stream to the response object (which goes to the client)
+        	    readStream.pipe(res);
+        	  });
+
+        	  // This catches any errors that happen while creating the readable stream (usually invalid names)
+        	  readStream.on('error', function(err) {
+        	    res.end(err);
+        	  });
+		  },
 			  
 		/**
 		 * Overrides for the settings in `config/controllers.js`
