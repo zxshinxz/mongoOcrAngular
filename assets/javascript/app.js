@@ -5,7 +5,7 @@
  */
 
 var mongoTest = angular.module('testApp', [ 'ngCookies', 'ngResource',
-		'ngSanitize', 'ngRoute','angularFileUpload' ]);
+		'ngSanitize', 'ngRoute','angularFileUpload','ui.bootstrap' ]);
 
 mongoTest.config(function($routeProvider) {
 	$routeProvider.when('/', {
@@ -19,9 +19,36 @@ mongoTest.config(function($routeProvider) {
 
 
 
-mongoTest.controller('MainCtrl',
-                                  function($scope, FileManager, $fileUploader) {
+mongoTest.controller('MainCtrl',function($scope, FileManager, $fileUploader, $window) {
 	
+	
+	$scope.loadFiles = function(){
+		FileManager.getFiles().then(function(data){
+			$scope.files = data;
+		});
+	};
+	
+	$scope.findFiles = function(word){
+		FileManager.getFiles(word).then(function(data){
+			$scope.files = data;
+		});
+	};
+	
+	$scope.viewfile = function(){
+		$window.open('/file/find?fileid=' + this.file._id);
+	};
+	
+	$scope.removefile = function(){
+		FileManager.removefile(this.file._id).then(function(data){
+			FileManager.getFiles($scope.searchword).then(function(data){
+				$scope.files = data;
+			});
+		});
+	};
+	
+	$scope.testing = function(){
+		var terstin ='asdf';
+	};
 	
 	 // create a uploader with options
     var uploader = $scope.uploader = $fileUploader.create({
@@ -29,7 +56,11 @@ mongoTest.controller('MainCtrl',
         alias: 'userPhoto',
         url: 'file/upload',
         formData: [
-//            { name: 'value' }
+                   { groupId: 101 },
+                   { reviewYear: 2014 },
+                   { uploadedBy: '67ansh' },
+                   { uploadedTs: '2014/05/22' },
+                   { DocumentType: 'GroupStructure' }
         ],
         filters: [
             function (item) {                    // first user filter
@@ -43,7 +74,7 @@ mongoTest.controller('MainCtrl',
     // FAQ #1
     var item = {
         file: {
-            name: 'Previously uploaded file',
+            name: 'initialisation',
             size: 1e6
         },
         progress: 100,
@@ -53,8 +84,8 @@ mongoTest.controller('MainCtrl',
     item.remove = function() {
         uploader.removeFromQueue(this);
     };
-    uploader.queue.push(item);
-    uploader.progress = 100;
+//    uploader.queue.push(item);
+//    uploader.progress = 100;
 
 
     // ADDING FILTERS
@@ -109,16 +140,7 @@ mongoTest.controller('MainCtrl',
     uploader.bind('completeall', function (event, items) {
         console.info('Complete all', items);
     });
-	
-	
-	
-	
 });
-
-
-
-
-
 
 
 mongoTest.service('FileManager', function($q, $http) {
@@ -136,16 +158,62 @@ mongoTest.service('FileManager', function($q, $http) {
 			deferred.resolve(data);
 		})
 		.error(function(data, status, headers, config){
-			alert('could not able to  upload file.')
+			alert('could not able to upload file.')
 			deferred.reject();
 		});
 		
 		return deferred.promise;
 		
 	};
+	
+	var _getFiles = function(word) {
+		
+		var deferred = $q.defer();
+		
+		if(word){
+			$http({url:'file/findall', params: {search: word}, method: 'GET'})
+			.success(function(data, status, headers, config){
+				deferred.resolve(data);
+			})
+			.error(function(data, status, headers, config){
+				alert('could not able to upload file.')
+				deferred.reject();
+			});
+		}else{
+			$http({url:'file/findall', method: 'GET'})
+			.success(function(data, status, headers, config){
+				deferred.resolve(data);
+			})
+			.error(function(data, status, headers, config){
+				alert('could not able to  get files.')
+				deferred.reject();
+			});
+		}
+		
+		return deferred.promise;
+		
+	};
+	
+	var _removefile= function(id){
+		
+		var deferred = $q.defer();
+		
+		$http({url:'file/remove', params: {fileid: id}, method: 'POST'})
+		.success(function(data, status, headers, config){
+			deferred.resolve(data);
+		})
+		.error(function(data, status, headers, config){
+			alert('could not able to  remove file.')
+			deferred.reject();
+		});
+		
+		return deferred.promise;
+	};
 
 	return {
-		createFile : _createFile
+		createFile : _createFile,
+		getFiles: _getFiles,
+		removefile: _removefile
 	};
 });
 

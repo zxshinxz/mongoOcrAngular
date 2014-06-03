@@ -5,37 +5,10 @@
  * @help        :: See http://links.sailsjs.org/docs/controllers
  */
 
-
-var sid = require('shortid');
-var fs = require('fs');
-var mkdirp = require('mkdirp');
-//var io = require('socket.io');
- 
-var UPLOAD_PATH = 'public/images';
- 
-// Setup id generator
-sid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$@');
-sid.seed(42);
- 
-function safeFilename(name) {
-  name = name.replace(/ /g, '-');
-  name = name.replace(/[^A-Za-z0-9-_\.]/g, '');
-  name = name.replace(/\.+/g, '.');
-  name = name.replace(/-+/g, '-');
-  name = name.replace(/_+/g, '_');
-  return name;
-}
- 
-function fileMinusExt(fileName) {
-  return fileName.split('.').slice(0, -1).join('.');
-}
- 
-function fileExtension(fileName) {
-  return fileName.split('.').slice(-1);
-}
- 
-
-function getConnectionString(config){
+function getConnectionString(){
+	
+	var identity = File.adapterDictionary.registerConnection;
+	 var config = File.connections[identity].config;
 	
 	// Build A Mongo Connection String
 	  var connectionString = 'mongodb://';
@@ -64,87 +37,183 @@ function getConnectionString(config){
 	  return connectionString;
 }
 
-
-// Where you would do your processing, etc
-// Stubbed out for now
-function processImage(id, name, path, cb) {
-  console.log('Processing image');
- 
-  cb(null, {
-    'result': 'success',
-    'id': id,
-    'name': name,
-    'path': path
-  });
+function getMongoDb(callback){
+	if(dbPool == null){
+		mongoDb.connect(getConnectionString(), function(err, db) {
+	 		 dbPool = db
+	 		callback(err, dbPool);
+		});
+	}else	
+		callback(null, dbPool);
 }
 
+function getContentOfPDF(pdf, savedFile){
+	var processor = pdf_extract(pdf.path, {type: 'ocr', split:false}, function(err) {
+	  if (err) {
+	    return callback(err);
+	  }
+	});
+	
+	processor.on('complete', function(data) {
+	  inspect(data.text_pages, 'extracted text pages');
+		getMongoDb(function(err, db){
+	 		if(err) return console.dir(err);
+ 		  	
+ 		  	console.log("ocr complete: " + savedFile.filename);
+ 		  	// do something with `file`
+ 		  	db.collection("my_collection.files").update({
+				_id : savedFile._id
+			}, {
+				$set : {
+					content : data.text_pages[0]
+				}
+			}, function(err, result){
+				 if(err) return console.dir(err);
+				 else 
+					 console.log("updated file with content metadata");
+			});
+ 		  	
+ 			
+		});
+		
+	});
+	
+	processor.on('log', function(log) {
+		  console.dir(log);
+	});
+	
+	processor.on('error', function(err) {
+//	  inspect(err, 'error while extracting pages');
+	  console.dir(err);
+	});
+}
 
-//var mongo = require('mongodb'),
-//Db = mongo.Db,
-//Grid = mongo.Grid,
-//ObjectID = require('mongodb').ObjectID;
-
-var mongo = require('mongodb');
-var Db = mongo.Db;
+var inspect = require('eyes').inspector({maxLength:20000});
+var fs = require('fs');
 var Grid = require('gridfs-stream');
+var pdf_extract = require('pdf-extract');
+var mongo = require('mongodb');
+var mongoDb = mongo.Db;
+var ObjectID = mongo.ObjectID;
+var dbPool = null;
 
 module.exports = {
 		
-		
-		
 		 upload: function (req, res) {
-		 
-		 	var identity = File.adapterDictionary.registerConnection;
-		 	var config = File.connections[identity].config;
-		 	var cstring  = getConnectionString(config);
-		 	
-		 	var file = req.files.userPhoto;
-		 	var id = sid.generate();
-		    var fileName = id + "." + fileExtension(safeFilename(file.name));
-		 	
-		 	Db.connect(cstring, function(err, db) {
-	 		  if(err) return console.dir(err);
-	 		  
-	 		  var gfs = Grid(db, mongo);
-		 		var writestream = gfs.createWriteStream({
-					filename : file.name,
-					mode : 'w',
-					content_type: file.mimetype,
-					chunkSize : 1024,
-					root : 'my_collection',
-					metadata : {
-						groupId: 101
-					}
-				});
-		 		
-		 		fs.createReadStream(file.path).pipe(writestream);
-		 		
-		 		writestream.on('close', function (file) {
-		 			  // do something with `file`
-		 			  console.log("file writing done: " + file.filename);
-		 			 res.send(); // 204
+			 	
+			 	// can get param from body.
+			 	var groupId = req.body.groupId;
+			 	var reviewYear = req.body.reviewYear;
+			 	var uploadedBy = req.body.uploadedBy;
+			 	var uploadedTs = req.body.uploadedTs;
+			 	var DocumentType = req.body.DocumentType;
+		 		var file = req.files.userPhoto;
+			 	
+		 		getMongoDb(function(err, db){
+			 		if(err) return console.dir(err);
+			 		var gfs = Grid(db, mongo);
+			 		var writestream = gfs.createWriteStream({
+						filename : file.originalname,
+						mode : 'w',
+						content_type: file.mimetype,
+						chunkSize : 1024,
+						root : 'my_collection',
+						metadata : {
+							groupId : groupId,
+							reviewYear : reviewYear,
+							uploadedBy : uploadedBy,
+							uploadedTs : uploadedTs,
+							DocumentType : DocumentType
+						}
+					});
+			 		
+			 		fs.createReadStream(file.path).pipe(writestream);
+			 		
+			 		writestream.on('close', function (savedFile) {
+			 			
+			 			// do something with `file`
+			 			console.log("file writing done: " + savedFile.filename);
+			 			res.send(); // 204
+			 			 
+			 			if(savedFile.contentType === 'application/pdf')
+				 			getContentOfPDF(file, savedFile);
+			 		});
 		 		});
-			 });
 		  },
-		  
+
 		  
 //		  find all files
 		  findAll: function(req, res){
-			  
+			  var searchWord = req.param("search");
+		 		  if(searchWord == undefined || searchWord == null)
+		 			 	getMongoDb(function(err, db){
+		 			 		if(err) return console.dir(err);
+			 				db.collection('my_collection.files').find().toArray(function(err, items) {
+				 		  		res.json(items);
+				 			 });
+			 		  	});
+		 		  else
+		 			  	getMongoDb(function(err, db){
+		 			 		if(err) return console.dir(err);
+			 				db.collection('my_collection.files').find({$text:{$search:searchWord}}).toArray(function(err, items) {
+				 		  		res.json(items);
+				 			 });
+		 		  		});
 		  },
 		  
 		  
 // 			find specific files
 		  find : function(req, res) {
+			  	
+			 	// can get param from body.
+			 	var fileId = req.param('fileid');
+			 	getMongoDb(function(err, db){
+			 		if(err) return console.dir(err);
+			 		  var gfs = Grid(db, mongo);
+			 		  
+			 		  var readstream = gfs.createReadStream({
+			 			  _id: fileId,
+			 			 root : 'my_collection'
+			 		  });
+			 		  
+					  readstream.pipe(res);
+					  readstream.on('end', function (file) {
+			 			  // do something with `file`
+			 			  console.log("file send done");
+			 			  res.send(); // 204
+					  });
+					  
+					 //error handling, e.g. file does not exist
+					  readstream.on('error', function (err) {
+					    console.log('An error occurred!', err);
+					    throw err;
+					  });
+			  	});
+	  },
+	  
+	  remove: function(req, res) {
+		// can get param from body.
+		 	var fileId = req.param('fileid');
+		 	getMongoDb(function(err, db) {
+				var gfs = Grid(db, mongo);
+				gfs.remove({
+					_id : fileId,
+					root : 'my_collection'
+				}, function(err) {
+					if (err)
+						return handleError(err);
+					console.log('success');
+					res.send(); // 204
+				});
 	
-		  },
+			});
+	  },
 			  
 		/**
 		 * Overrides for the settings in `config/controllers.js`
 		 * (specific to GifController)
 		 */
 		  _config: {}
-		
 		
 };
 

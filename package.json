@@ -28,7 +28,8 @@
     "mongodb": "^1.4.5",
     "multer": "0.0.7",
     "step": "0.0.5",
-    "gridfs-stream": "^0.5.1"
+    "gridfs-stream": "^0.5.1",
+    "eyes": "^0.1.8"
   },
   "scripts": {
     "start": "node app.js",
