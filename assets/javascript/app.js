@@ -11,7 +11,11 @@ mongoTest.config(function($routeProvider) {
 	$routeProvider.when('/', {
 		templateUrl : 'templates/main.html',
 		controller : 'MainCtrl'
-	}).otherwise({
+	}).when('/view', {
+		templateUrl : 'templates/view.html',
+		controller : 'ViewCtrl'
+	})
+	.otherwise({
 		redirectTo : '/'
 	});
 });
@@ -142,6 +146,10 @@ mongoTest.controller('MainCtrl',function($scope, FileManager, $fileUploader, $wi
     });
 });
 
+
+mongoTest.controller('ViewCtrl',function($scope) {
+	
+});
 
 mongoTest.service('FileManager', function($q, $http) {
 

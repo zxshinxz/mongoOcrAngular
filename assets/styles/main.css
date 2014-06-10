@@ -4,6 +4,22 @@
 
 html, body {
 	height: 100%;
+	overflow: hide;
+}
+
+div.default-page {
+	width: 100%;
+	height: 100%;
+}
+
+div.container {
+	width: 100%;
+	height: 100%;
+}
+
+div.view-box {
+	width: 100%;
+	height: 100%;
 }
 
 .heading {
@@ -18,6 +34,20 @@ html, body {
 }/* Default class applied to drop zones on over */
 .another-file-over-class {
 	border: dotted 3px green;
+}
+
+.pdf-canvas {
+	width: 100%;
+	height: 90%;
+}
+
+.highliter {
+	background-color: rgba(0,255,0,0.5);
+	width: 100px;
+	height: 30px;
+	position: absolute;
+	left: 0px;
+	top: 0px;
 }
 
 /*article {
